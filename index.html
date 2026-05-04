@@ -1,29 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Modelo Secuencial</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"> </script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!--IMPLEMENTAMOS charts o sea importamos en el script para que lo lea-->
 </head>
 <body>
-    <div id="output_field"></div>
+    <h1>Modelo secuencial</h1>
+    <p>La gráfica muestra cómo baja la pérdida durante el entrenamiento.</p>
+    <canvas id="lossChart" width="800" height="400"></canvas>
+    <p id="output_field"></p><!--aca nada más cambiamos para un parrafo lo q antes estaba en un div, sigue usando el mismo id para visualizar-->
 </body>
 <script>
+    /*
+    CÓDIGO VIEJO QUE REALIZAMOS CON EL VIDEO
+
     async function learnLinear() {
         const model = tf.sequential();
-        model.add(tf.layers.dense({units: 1, inputShape: [1]}))
+        model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
         model.compile({
             loss: "meanSquaredError",
             optimizer: "sgd",
-        })
-        const xs = tf.tensor2d([-1,0,1,2,3,4], [6,1])
-        const ys= tf.tensor2d([-3,-1, 1, 3, 5, 7], [6,1])
-        await model.fit(xs, ys, {epochs: 250})
-        
-        document.getElementById("output_field").innerText = 
-        model.predict(tf.tensor2d([20], [1,1]))
+        });
+
+        const xs = tf.tensor2d([-1, 0, 1, 2, 3, 4], [6, 1]);
+        const ys = tf.tensor2d([-3, -1, 1, 3, 5, 7], [6, 1]);
+
+        await model.fit(xs, ys, { epochs: 250 });
+
+        document.getElementById("output_field").innerText =
+            model.predict(tf.tensor2d([20], [1, 1]));
     }
-    learnLinear()
+
+    learnLinear();
+    */
+
+    async function learnLinear() {
+        // NUEVO: arreglos para guardar puntos de la gráfica.
+        const epochValues = [];
+        const lossValues = [];
+
+        const model = tf.sequential();
+        model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+        model.compile({
+            loss: "meanSquaredError",
+            optimizer: "sgd",
+        });
+
+        const xs = tf.tensor2d([-1, 0, 1, 2, 3, 4], [6, 1]);
+        const ys = tf.tensor2d([-3, -1, 1, 3, 5, 7], [6, 1]);
+
+        // NUEVO: gráfica mínima con eje X (épocas) e Y (loss).
+        const lossChart = new Chart(document.getElementById("lossChart"), {
+            type: "line",
+            data: {
+                labels: epochValues,
+                datasets: [{
+                    label: "Loss",
+                    data: lossValues,
+                    borderColor: "#1d4ed8",
+                    backgroundColor: "rgba(29, 78, 216, 0.15)",
+                    fill: true,
+                    tension: 0.2,
+                }],
+            },
+            options: {
+                responsive: true,
+                animation: false,
+                scales: {
+                    x: { title: { display: true, text: "Épocas" } },
+                    y: { title: { display: true, text: "Loss" } },
+                },
+            },
+        });
+
+        // VIEJO (sin gráfica):
+        // await model.fit(xs, ys, { epochs: 250 });
+
+        // NUEVO (con gráfica): capturamos loss en cada época.
+        await model.fit(xs, ys, {
+            epochs: 250,
+            callbacks: {
+                onEpochEnd: (epoch, logs) => {
+                    epochValues.push(epoch + 1);
+                    lossValues.push(logs.loss);
+                    lossChart.update();
+                },
+            },
+        });
+
+        // VIEJO:
+        // document.getElementById("output_field").innerText =
+        //     model.predict(tf.tensor2d([20], [1, 1]));
+
+        // NUEVO: mostramos solo el valor numérico de la predicción.
+        const prediction = model.predict(tf.tensor2d([20], [1, 1]));
+        document.getElementById("output_field").innerText =
+            "Predicción para x = 20: " + prediction.dataSync()[0];
+    }
+
+    learnLinear();
 </script>
 </html>
